@@ -1,0 +1,44 @@
+# Place at: .github/workflows/ps-watcher.yml  (in a PUBLIC repo -> unlimited free minutes)
+# Repo secret needed: NTFY_TOPIC  (Settings -> Secrets and variables -> Actions)
+name: PS watcher
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 min (GitHub's minimum; runs can lag a few minutes)
+  workflow_dispatch:         # lets you trigger a run manually from the Actions tab
+
+permissions:
+  contents: write            # needed to commit the state file back
+
+concurrency:
+  group: ps-watcher
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install requests
+
+      - name: Check for high prep PS
+        run: python ps_watcher_ntfy.py --once
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+
+      # Runners are wiped after each run, so save "already alerted" state in the repo
+      - name: Save state
+        run: |
+          if [ -n "$(git status --porcelain ps_watcher_ntfy_state.json)" ]; then
+            git config user.name "ps-watcher"
+            git config user.email "ps-watcher@users.noreply.github.com"
+            git add ps_watcher_ntfy_state.json
+            git commit -m "Update PS watcher state"
+            git push
+          fi
