@@ -28,7 +28,7 @@ jobs:
       - run: pip install requests
 
       - name: Check for high prep PS
-        run: python ps_watcher_ntfy.py --test && python ps_watcher_ntfy.py --once
+        run: python ps_watcher_ntfy.py --once
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
 
